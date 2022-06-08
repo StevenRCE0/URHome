@@ -1,6 +1,6 @@
 import http from "http"
 
-cachedConditions = {
+let cachedConditions = {
   URLight: {
     on: false,
     brightness: 0,
