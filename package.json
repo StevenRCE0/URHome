@@ -1,0 +1,7 @@
+{
+  "name": "URHome",
+  "packageManager": "yarn@3.2.1",
+  "dependencies": {
+    "johnny-five": "^2.1.0"
+  }
+}
