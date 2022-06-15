@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>RunAtLoad</key>
+        <true/>
+        <key>KeepAlive</key>
+        <true/>
+        <key>Label</key>
+        <string>com.urhome.service</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>(path/to/node)</string>
+            <string>(path/to/service.js)</string>
+            <string>run</string>
+            <string>-I</string>
+            <string>-U</string>
+            <string>(/path/to/workingDirectory)</string>
+        </array>
+        <key>WorkingDirectory</key>
+        <string>(/path/to/workingDirectory)</string>
+        <key>StandardOutPath</key>
+        <string>(/path/to/workingDirectory)/urhome.log</string>
+        <key>StandardErrorPath</key>
+        <string>(/path/to/workingDirectory)/urhome.log</string>
+        <key>UserName</key>
+        <string>(username)</string>
+        <key>EnvironmentVariables</key>
+        <dict>
+            <key>PATH</key>
+            <string>/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        </dict>
+    </dict>
+</plist>
