@@ -4,5 +4,8 @@
   "packageManager": "yarn@3.2.1",
   "dependencies": {
     "johnny-five": "^2.1.0"
+  },
+  "scripts": {
+    "start": "node service.js"
   }
 }

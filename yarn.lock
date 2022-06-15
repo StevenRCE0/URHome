@@ -126,14 +126,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"URHome@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "URHome@workspace:."
-  dependencies:
-    johnny-five: ^2.1.0
-  languageName: unknown
-  linkType: soft
-
 "abbrev@npm:1":
   version: 1.1.1
   resolution: "abbrev@npm:1.1.1"
@@ -1537,6 +1529,14 @@ __metadata:
   checksum: 5b6876a645da08d505dedb970d1571f6cebdf87044cb6b740c8dbb24f0d6e1dc8bdbf46825fd09f994d7cf50760e6f6e063cfa197d51c5902c00a861702eb75a
   languageName: node
   linkType: hard
+
+"urhome@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "urhome@workspace:."
+  dependencies:
+    johnny-five: ^2.1.0
+  languageName: unknown
+  linkType: soft
 
 "util-deprecate@npm:^1.0.1, util-deprecate@npm:~1.0.1":
   version: 1.0.2

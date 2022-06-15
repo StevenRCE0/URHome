@@ -17,14 +17,14 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
     ],\
     "dependencyTreeRoots": [\
       {\
-        "name": "URHome",\
+        "name": "urhome",\
         "reference": "workspace:."\
       }\
     ],\
     "enableTopLevelFallback": true,\
     "ignorePatternData": "(^(?:\\\\.yarn\\\\/sdks(?:\\\\/(?!\\\\.{1,2}(?:\\\\/|$))(?:(?:(?!(?:^|\\\\/)\\\\.{1,2}(?:\\\\/|$)).)*?)|$))$)",\
     "fallbackExclusionList": [\
-      ["URHome", ["workspace:."]]\
+      ["urhome", ["workspace:."]]\
     ],\
     "fallbackPool": [\
     ],\
@@ -178,16 +178,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@tootallnate/once", "npm:2.0.0"]\
           ],\
           "linkType": "HARD"\
-        }]\
-      ]],\
-      ["URHome", [\
-        ["workspace:.", {\
-          "packageLocation": "./",\
-          "packageDependencies": [\
-            ["URHome", "workspace:."],\
-            ["johnny-five", "npm:2.1.0"]\
-          ],\
-          "linkType": "SOFT"\
         }]\
       ]],\
       ["abbrev", [\
@@ -1775,6 +1765,16 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["imurmurhash", "npm:0.1.4"]\
           ],\
           "linkType": "HARD"\
+        }]\
+      ]],\
+      ["urhome", [\
+        ["workspace:.", {\
+          "packageLocation": "./",\
+          "packageDependencies": [\
+            ["urhome", "workspace:."],\
+            ["johnny-five", "npm:2.1.0"]\
+          ],\
+          "linkType": "SOFT"\
         }]\
       ]],\
       ["util-deprecate", [\
