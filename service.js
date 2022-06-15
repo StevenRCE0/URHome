@@ -11,16 +11,18 @@ let cachedConditions = {
 
 var board = new five.Board()
 var boardReady = false
-const pinDefinitions = {
-    mainPositive: new five.Pin(13),
-    mainNegative: new five.Pin(12),
-    on: new five.Pin(2),
-    off: new five.Pin(3),
-    brightnessIncrease: new five.Pin(4),
-    brightnessDecrease: new five.Pin(5),
-    temperatureColder: new five.Pin(6),
-    temperatureWarmer: new five.Pin(7),
+var pinDefinitions = {
+    mainPositive: undefined,
+    mainNegative: undefined,
+    on: undefined,
+    off: undefined,
+    brightnessIncrease: undefined,
+    brightnessDecrease: undefined,
+    temperatureColder: undefined,
+    temperatureWarmer: undefined,
 }
+const brightnessSteps = 10
+const temperatureSteps = 10
 
 function tapButton(pin) {
     pin.high()
@@ -29,8 +31,29 @@ function tapButton(pin) {
     }, 500)
 }
 
+function resetLight() {
+    if (boardReady) {
+        tapButton(pinDefinitions.on)
+        for (let i = 0; i < brightnessSteps; i++) {
+            tapButton(pinDefinitions.brightnessIncrease)
+        }
+    }
+    cachedConditions.URLight.brightness = 100
+    cachedConditions.URLight.on = true
+}
 board.on('ready', () => {
     console.log('Board ready')
+    pinDefinitions = {
+        mainPositive: new five.Pin(13),
+        mainNegative: new five.Pin(12),
+        on: new five.Pin(2),
+        off: new five.Pin(3),
+        brightnessIncrease: new five.Pin(4),
+        brightnessDecrease: new five.Pin(5),
+        temperatureColder: new five.Pin(6),
+        temperatureWarmer: new five.Pin(7),
+    }
+    boardReady = true
     Object.entries(pinDefinitions).forEach(([key, pin]) => {
         if (key === 'mainPositive') {
             pin.high()
@@ -38,16 +61,12 @@ board.on('ready', () => {
             pin.low()
         }
     })
-    mainPositive.high()
-    setTimeout(() => {
-        off0.high()
-        off1.low()
-    }, 1000)
 })
 
 http.createServer((req, res) => {
     const requestURL = new URL(req.url, `http://${req.headers.host}`)
     const requestPath = requestURL.pathname.split('/')
+    console.log(pinDefinitions)
     if (requestPath[1] === 'light') {
         const result =
             lightResponder(requestPath[2], requestURL.search.substring(1)) ??
@@ -61,7 +80,6 @@ const lightResponder = (type, value) => {
     console.log(type, typeof value, value.length)
     if (type === 'on') {
         if (value.length > 0) {
-            // TODO: Johnny here
             if (value === 'on') {
                 if (boardReady) {
                     tapButton(pinDefinitions.on)
@@ -81,8 +99,36 @@ const lightResponder = (type, value) => {
     }
     if (type === 'brightness') {
         if (value.length > 0) {
-            // TODO: Johnny here
-            cachedConditions['URLight'].brightness = value
+            const cachedBrightnessStep = Math.round(
+                (brightnessSteps * cachedConditions.URLight.brightness) / 100
+            )
+            const newBrightnessStep = Math.round(
+                (brightnessSteps * value) / 100
+            )
+            if (boardReady) {
+                if (newBrightnessStep > cachedBrightnessStep) {
+                    for (
+                        let i = cachedBrightnessStep;
+                        i < newBrightnessStep;
+                        i++
+                    ) {
+                        tapButton(pinDefinitions.brightnessIncrease)
+                        cachedConditions['URLight'].brightness = value
+                    }
+                } else if (newBrightnessStep < cachedBrightnessStep) {
+                    for (
+                        let i = cachedBrightnessStep;
+                        i > newBrightnessStep;
+                        i--
+                    ) {
+                        tapButton(pinDefinitions.brightnessDecrease)
+                        cachedConditions['URLight'].brightness = value
+                    }
+                }
+            } else {
+                // Dummy value
+                cachedConditions.URLight.brightness = value
+            }
         } else {
             return JSON.stringify(cachedConditions['URLight'].brightness)
         }
