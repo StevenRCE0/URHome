@@ -101,7 +101,7 @@ const lightResponder = (type, value) => {
                         : cachedConditions.URLight.on
             }
         } else {
-            return JSON.stringify(cachedConditions['URLight'].on)
+            return JSON.stringify(cachedConditions['URLight'].on ? 1 : 0)
         }
     }
     if (type === 'brightness') {
