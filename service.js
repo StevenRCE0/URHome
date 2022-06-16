@@ -14,7 +14,9 @@ let cachedConditions = {
     },
 }
 
-var board = new five.Board()
+var board = new five.Board({
+    repl: false,
+})
 var boardReady = false
 var pinDefinitions = {
     on: undefined,
@@ -57,9 +59,9 @@ board.on('ready', () => {
         // temperatureWarmer: new five.Pin(7),
     }
     const integratedSensor = new five.Multi({
-        controller: "BME280"
+        controller: 'BME280',
     })
-    integratedSensor.on("data", function() {
+    integratedSensor.on('data', function () {
         cachedConditions.Sensor.temperature = this.thermometer.celsius
         cachedConditions.Sensor.humidity = this.hygrometer.relativeHumidity
     })
