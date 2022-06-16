@@ -29,13 +29,17 @@ var pinDefinitions = {
 const brightnessSteps = 10
 const temperatureSteps = 10
 
+const relayTiming = {
+    on: 350,
+    off: 150
+}
+
 const tapButton = (pin) => {
-    setTimeout(() => {
-        pin.high()
-    }, 200)
+    console.log('Tapped', pin.pin)
+    pin.high()
     setTimeout(() => {
         pin.low()
-    }, 200)
+    }, relayTiming.off)
 }
 
 const resetLight = () => {
@@ -91,7 +95,7 @@ http.createServer((req, res) => {
 const lightResponder = (type, value) => {
     if (type === 'on') {
         if (value.length > 0) {
-            if (boardReady && cachedConditions.URLight.locked) {
+            if (boardReady && !cachedConditions.URLight.locked) {
                 cachedConditions.URLight.locked = true
                 if (value === 'on') {
                     tapButton(pinDefinitions.on)
@@ -116,34 +120,28 @@ const lightResponder = (type, value) => {
     }
     if (type === 'brightness') {
         if (value.length > 0) {
-            const cachedBrightnessStep = Math.round(
+            var cachedBrightnessStep = Math.round(
                 (brightnessSteps * cachedConditions.URLight.brightness) / 100
             )
             const newBrightnessStep = Math.round(
                 (brightnessSteps * value) / 100
             )
-            if (boardReady && !cachedConditions.URLight.locked) {
+            if (cachedConditions.URLight.locked) {return}
+            if (boardReady) {
                 cachedConditions.URLight.locked = true
-                if (newBrightnessStep > cachedBrightnessStep) {
-                    for (
-                        let i = cachedBrightnessStep;
-                        i < newBrightnessStep;
-                        i++
-                    ) {
+                const interval = setInterval(() => {
+                    if (cachedBrightnessStep < newBrightnessStep) {
                         tapButton(pinDefinitions.brightnessIncrease)
-                        cachedConditions['URLight'].brightness = value
-                    }
-                } else if (newBrightnessStep < cachedBrightnessStep) {
-                    for (
-                        let i = cachedBrightnessStep;
-                        i > newBrightnessStep;
-                        i--
-                    ) {
+                        cachedBrightnessStep++
+                    } else if (cachedBrightnessStep > newBrightnessStep) {
                         tapButton(pinDefinitions.brightnessDecrease)
-                        cachedConditions['URLight'].brightness = value
+                        cachedBrightnessStep--
+                    } else {
+                        clearInterval(interval)
                     }
-                }
+                }, relayTiming.off + relayTiming.on)
                 cachedConditions.URLight.locked = false
+                cachedConditions['URLight'].brightness = value
             } else if (!boardReady) {
                 // Dummy value
                 cachedConditions.URLight.brightness = value
