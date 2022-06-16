@@ -30,8 +30,8 @@ const brightnessSteps = 10
 const temperatureSteps = 10
 
 const relayTiming = {
-    on: 350,
-    off: 150
+    on: 75,
+    off: 50
 }
 
 const tapButton = (pin) => {
