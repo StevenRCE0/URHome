@@ -59,7 +59,7 @@ board.on('ready', () => {
     const integratedSensor = new five.Multi({
         controller: "BME280"
     })
-    multi.on("data", function() {
+    integratedSensor.on("data", function() {
         cachedConditions.Sensor.temperature = this.thermometer.celsius
         cachedConditions.Sensor.humidity = this.hygrometer.relativeHumidity
     })
