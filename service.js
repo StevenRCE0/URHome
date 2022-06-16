@@ -79,8 +79,7 @@ http.createServer((req, res) => {
             'OK'
         res.writeHead(200, { 'Content-Type': 'text/plain' })
         res.end(result)
-    }
-    if (requestPath[1] === 'sensor') {
+    } else if (requestPath[1] === 'sensor') {
         res.writeHead(200, { 'Content-Type': 'text/plain' })
         res.end(sensorResponder())
     }
@@ -148,7 +147,7 @@ const lightResponder = (type, value) => {
                 cachedConditions.URLight.brightness = value
             }
         } else {
-            return JSON.stringify(cachedConditions['URLight'].brightness)
+            return cachedConditions['URLight'].brightness.toString()
         }
     }
 }
