@@ -10,5 +10,5 @@ read -p "Load? (y) " load
 if [ "$load" != "y" ]; then
     exit 0
 fi
-sudo cp ./macOSservice/com.urhome.service.plist /Library/LaunchAgents/
+sudo cp ./macOSservice/com.urhome.service.plist /Library/LaunchDaemons/
 launchctl load /Library/LaunchAgents/com.urhome.service.plist
