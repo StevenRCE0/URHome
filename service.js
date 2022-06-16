@@ -72,7 +72,6 @@ board.on('ready', () => {
 http.createServer((req, res) => {
     const requestURL = new URL(req.url, `http://${req.headers.host}`)
     const requestPath = requestURL.pathname.split('/')
-    console.log(pinDefinitions, cachedConditions)
     if (requestPath[1] === 'light') {
         const result =
             lightResponder(requestPath[2], requestURL.search.substring(1)) ??
@@ -86,7 +85,6 @@ http.createServer((req, res) => {
 }).listen(8700)
 
 const lightResponder = (type, value) => {
-    console.log(type, typeof value, value.length, value)
     if (type === 'on') {
         if (value.length > 0) {
             if (boardReady && cachedConditions.URLight.locked) {
