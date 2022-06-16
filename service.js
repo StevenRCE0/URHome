@@ -6,6 +6,7 @@ let cachedConditions = {
         on: false,
         brightness: 0,
         temperature: 0,
+        locked: false,
     },
 }
 
@@ -24,14 +25,14 @@ var pinDefinitions = {
 const brightnessSteps = 10
 const temperatureSteps = 10
 
-function tapButton(pin) {
+const tapButton = (pin) => {
     pin.high()
     setTimeout(() => {
         pin.low()
     }, 500)
 }
 
-function resetLight() {
+const resetLight = () => {
     if (boardReady) {
         tapButton(pinDefinitions.on)
         for (let i = 0; i < brightnessSteps; i++) {
@@ -77,22 +78,28 @@ http.createServer((req, res) => {
 }).listen(8700)
 
 const lightResponder = (type, value) => {
-    console.log(type, typeof value, value.length)
+    console.log(type, typeof value, value.length, value)
     if (type === 'on') {
         if (value.length > 0) {
-            if (value === 'on') {
-                if (boardReady) {
+            if (boardReady && cachedConditions.URLight.locked) {
+                cachedConditions.URLight.locked = true
+                if (value === 'on') {
                     tapButton(pinDefinitions.on)
-                }
-                cachedConditions.URLight.on = true
-            }
-            if (value === 'off') {
-                if (boardReady) {
+                    cachedConditions.URLight.on = true
+                } else if (value === 'off') {
                     tapButton(pinDefinitions.off)
+                    cachedConditions.URLight.on = false
                 }
-                cachedConditions.URLight.on = false
+                cachedConditions.URLight.locked = false
+            } else if (!boardReady) {
+                // Dummy value
+                cachedConditions.URLight.on =
+                    value === 'on'
+                        ? true
+                        : value === 'off'
+                        ? false
+                        : cachedConditions.URLight.on
             }
-            console.log(cachedConditions)
         } else {
             return JSON.stringify(cachedConditions['URLight'].on)
         }
@@ -105,7 +112,8 @@ const lightResponder = (type, value) => {
             const newBrightnessStep = Math.round(
                 (brightnessSteps * value) / 100
             )
-            if (boardReady) {
+            if (boardReady && !cachedConditions.URLight.locked) {
+                cachedConditions.URLight.locked = true
                 if (newBrightnessStep > cachedBrightnessStep) {
                     for (
                         let i = cachedBrightnessStep;
@@ -125,7 +133,8 @@ const lightResponder = (type, value) => {
                         cachedConditions['URLight'].brightness = value
                     }
                 }
-            } else {
+                cachedConditions.URLight.locked = false
+            } else if (!boardReady) {
                 // Dummy value
                 cachedConditions.URLight.brightness = value
             }
