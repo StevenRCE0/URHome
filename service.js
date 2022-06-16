@@ -30,10 +30,12 @@ const brightnessSteps = 10
 const temperatureSteps = 10
 
 const tapButton = (pin) => {
-    pin.high()
+    setTimeout(() => {
+        pin.high()
+    }, 200)
     setTimeout(() => {
         pin.low()
-    }, 500)
+    }, 200)
 }
 
 const resetLight = () => {
