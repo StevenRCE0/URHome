@@ -8,19 +8,21 @@ let cachedConditions = {
         temperature: 0,
         locked: false,
     },
+    Sensor: {
+        temperature: 29,
+        humidity: 40,
+    },
 }
 
 var board = new five.Board()
 var boardReady = false
 var pinDefinitions = {
-    mainPositive: undefined,
-    mainNegative: undefined,
     on: undefined,
     off: undefined,
     brightnessIncrease: undefined,
     brightnessDecrease: undefined,
-    temperatureColder: undefined,
-    temperatureWarmer: undefined,
+    // temperatureColder: undefined,
+    // temperatureWarmer: undefined,
 }
 const brightnessSteps = 10
 const temperatureSteps = 10
@@ -45,35 +47,42 @@ const resetLight = () => {
 board.on('ready', () => {
     console.log('Board ready')
     pinDefinitions = {
-        mainPositive: new five.Pin(13),
-        mainNegative: new five.Pin(12),
+        // mainPositive: new five.Pin(13),
+        // mainNegative: new five.Pin(12),
         on: new five.Pin(2),
         off: new five.Pin(3),
         brightnessIncrease: new five.Pin(4),
         brightnessDecrease: new five.Pin(5),
-        temperatureColder: new five.Pin(6),
-        temperatureWarmer: new five.Pin(7),
+        // temperatureColder: new five.Pin(6),
+        // temperatureWarmer: new five.Pin(7),
     }
+    const integratedSensor = new five.Multi({
+        controller: "BME280"
+    })
+    multi.on("data", function() {
+        cachedConditions.Sensor.temperature = this.thermometer.celsius
+        cachedConditions.Sensor.humidity = this.hygrometer.relativeHumidity
+    })
     boardReady = true
     Object.entries(pinDefinitions).forEach(([key, pin]) => {
-        if (key === 'mainPositive') {
-            pin.high()
-        } else {
-            pin.low()
-        }
+        pin.low()
     })
 })
 
 http.createServer((req, res) => {
     const requestURL = new URL(req.url, `http://${req.headers.host}`)
     const requestPath = requestURL.pathname.split('/')
-    console.log(pinDefinitions)
+    console.log(pinDefinitions, cachedConditions)
     if (requestPath[1] === 'light') {
         const result =
             lightResponder(requestPath[2], requestURL.search.substring(1)) ??
             'OK'
         res.writeHead(200, { 'Content-Type': 'text/plain' })
         res.end(result)
+    }
+    if (requestPath[1] === 'sensor') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' })
+        res.end(sensorResponder())
     }
 }).listen(8700)
 
@@ -142,4 +151,8 @@ const lightResponder = (type, value) => {
             return JSON.stringify(cachedConditions['URLight'].brightness)
         }
     }
+}
+
+const sensorResponder = () => {
+    return JSON.stringify(cachedConditions['Sensor'])
 }
