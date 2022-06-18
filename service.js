@@ -138,9 +138,9 @@ const lightResponder = (type, value) => {
                         cachedBrightnessStep--
                     } else {
                         clearInterval(interval)
+                        cachedConditions.URLight.locked = false
                     }
                 }, relayTiming.off + relayTiming.on)
-                cachedConditions.URLight.locked = false
                 cachedConditions['URLight'].brightness = value
             } else if (!boardReady) {
                 // Dummy value
