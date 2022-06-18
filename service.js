@@ -55,8 +55,6 @@ const resetLight = () => {
 board.on('ready', () => {
     console.log('Board ready')
     pinDefinitions = {
-        // mainPositive: new five.Pin(13),
-        // mainNegative: new five.Pin(12),
         on: new five.Pin(2),
         off: new five.Pin(3),
         brightnessIncrease: new five.Pin(4),
@@ -111,8 +109,8 @@ const lightResponder = (type, value) => {
                     value === 'on'
                         ? true
                         : value === 'off'
-                        ? false
-                        : cachedConditions.URLight.on
+                            ? false
+                            : cachedConditions.URLight.on
             }
         } else {
             return JSON.stringify(cachedConditions['URLight'].on ? 1 : 0)
@@ -126,7 +124,7 @@ const lightResponder = (type, value) => {
             const newBrightnessStep = Math.round(
                 (brightnessSteps * value) / 100
             )
-            if (cachedConditions.URLight.locked) {return}
+            if (cachedConditions.URLight.locked) { return }
             if (boardReady) {
                 cachedConditions.URLight.locked = true
                 const interval = setInterval(() => {
