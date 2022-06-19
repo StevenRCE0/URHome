@@ -26,7 +26,7 @@ var pinDefinitions = {
     // temperatureColder: undefined,
     // temperatureWarmer: undefined,
 }
-const brightnessSteps = 10
+const brightnessSteps = 15
 const temperatureSteps = 10
 
 const relayTiming = {
