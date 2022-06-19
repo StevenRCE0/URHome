@@ -28,6 +28,10 @@ var pinDefinitions = {
 }
 const brightnessSteps = 15
 const temperatureSteps = 10
+const temperatureRange = {
+    min: 50,
+    max: 400
+}
 
 const relayTiming = {
     on: 75,
@@ -59,8 +63,8 @@ board.on('ready', () => {
         off: new five.Pin(3),
         brightnessIncrease: new five.Pin(4),
         brightnessDecrease: new five.Pin(5),
-        // temperatureColder: new five.Pin(6),
-        // temperatureWarmer: new five.Pin(7),
+        temperatureColder: new five.Pin(7),
+        temperatureWarmer: new five.Pin(6),
     }
     const integratedSensor = new five.Multi({
         controller: 'BME280',
@@ -146,6 +150,38 @@ const lightResponder = (type, value) => {
             }
         } else {
             return cachedConditions['URLight'].brightness.toString()
+        }
+    }
+    if (type === 'temperature') {
+        if (value.length > 0) {
+            var cachedTemperatureStep = Math.round(
+                (temperatureSteps * cachedConditions.URLight.temperature - temperatureRange.min) / (temperatureRange.max - temperatureRange.min)
+            )
+            const newTemperatureStep = Math.round(
+                (temperatureSteps * value - temperatureRange.min) / (temperatureRange.max - temperatureRange.min)
+            )
+            if (cachedConditions.URLight.locked) {return}
+            if (boardReady) {
+                cachedConditions.URLight.locked = true
+                const interval = setInterval(() => {
+                    if (cachedTemperatureStep < newTemperatureStep) {
+                        tapButton(pinDefinitions.temperatureColder)
+                        cachedTemperatureStep++
+                    } else if (cachedTemperatureStep > newTemperatureStep) {
+                        tapButton(pinDefinitions.temperatureWarmer)
+                        cachedTemperatureStep--
+                    } else {
+                        clearInterval(interval)
+                        cachedConditions.URLight.locked = false
+                    }
+                }, relayTiming.off + relayTiming.on)
+                cachedConditions['URLight'].temperature = value
+            } else if (!boardReady) {
+                // Dummy value
+                cachedConditions.URLight.temperature = value
+            }
+        } else {
+            return cachedConditions['URLight'].temperature.toString()
         }
     }
 }
