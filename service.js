@@ -1,11 +1,23 @@
 import http from 'http'
 import five from 'johnny-five'
 
+const brightnessSteps = 15
+const temperatureSteps = 15
+const temperatureRange = {
+    min: 50,
+    max: 400
+}
+
+const relayTiming = {
+    on: 75,
+    off: 50
+}
+
 let cachedConditions = {
     URLight: {
         on: false,
         brightness: 0,
-        temperature: 0,
+        temperature: temperatureRange.min,
         locked: false,
     },
     Sensor: {
@@ -26,17 +38,6 @@ var pinDefinitions = {
     temperatureColder: undefined,
     temperatureWarmer: undefined,
 }
-const brightnessSteps = 15
-const temperatureSteps = 10
-const temperatureRange = {
-    min: 50,
-    max: 400
-}
-
-const relayTiming = {
-    on: 75,
-    off: 50
-}
 
 const tapButton = (pin) => {
     console.log('Tapped', pin.pin)
@@ -56,6 +57,7 @@ const resetLight = () => {
     cachedConditions.URLight.brightness = 100
     cachedConditions.URLight.on = true
 }
+
 board.on('ready', () => {
     console.log('Board ready')
     pinDefinitions = {
