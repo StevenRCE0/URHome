@@ -23,8 +23,8 @@ var pinDefinitions = {
     off: undefined,
     brightnessIncrease: undefined,
     brightnessDecrease: undefined,
-    // temperatureColder: undefined,
-    // temperatureWarmer: undefined,
+    temperatureColder: undefined,
+    temperatureWarmer: undefined,
 }
 const brightnessSteps = 15
 const temperatureSteps = 10
@@ -55,8 +55,6 @@ const resetLight = () => {
 board.on('ready', () => {
     console.log('Board ready')
     pinDefinitions = {
-        // mainPositive: new five.Pin(13),
-        // mainNegative: new five.Pin(12),
         on: new five.Pin(2),
         off: new five.Pin(3),
         brightnessIncrease: new five.Pin(4),
@@ -138,9 +136,9 @@ const lightResponder = (type, value) => {
                         cachedBrightnessStep--
                     } else {
                         clearInterval(interval)
+                        cachedConditions.URLight.locked = false
                     }
                 }, relayTiming.off + relayTiming.on)
-                cachedConditions.URLight.locked = false
                 cachedConditions['URLight'].brightness = value
             } else if (!boardReady) {
                 // Dummy value
