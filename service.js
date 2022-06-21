@@ -24,6 +24,7 @@ let cachedConditions = {
         temperature: 29,
         humidity: 40,
     },
+    HallLightOn: false
 }
 
 var board = new five.Board({
@@ -37,6 +38,7 @@ var pinDefinitions = {
     brightnessDecrease: undefined,
     temperatureColder: undefined,
     temperatureWarmer: undefined,
+    IR: undefined
 }
 
 const tapButton = (pin) => {
@@ -67,6 +69,7 @@ board.on('ready', () => {
         brightnessDecrease: new five.Pin(5),
         temperatureColder: new five.Pin(7),
         temperatureWarmer: new five.Pin(6),
+        IR: new five.Led(8)
     }
     const integratedSensor = new five.Multi({
         controller: 'BME280',
@@ -85,14 +88,14 @@ http.createServer((req, res) => {
     const requestURL = new URL(req.url, `http://${req.headers.host}`)
     const requestPath = requestURL.pathname.split('/')
     if (requestPath[1] === 'light') {
-        const result =
-            lightResponder(requestPath[2], requestURL.search.substring(1)) ??
-            'OK'
         res.writeHead(200, { 'Content-Type': 'text/plain' })
-        res.end(result)
+        res.end(lightResponder(requestPath[2], requestURL.search.substring(1)))
     } else if (requestPath[1] === 'sensor') {
         res.writeHead(200, { 'Content-Type': 'text/plain' })
         res.end(sensorResponder())
+    } else if (requestPath[1] === 'hallLight') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' })
+        res.end(IRResponder(requestURL.search.substring(1)))
     }
 }).listen(8700)
 
@@ -118,6 +121,7 @@ const lightResponder = (type, value) => {
                             ? false
                             : cachedConditions.URLight.on
             }
+            return 'OK'
         } else {
             return JSON.stringify(cachedConditions['URLight'].on ? 1 : 0)
         }
@@ -150,6 +154,7 @@ const lightResponder = (type, value) => {
                 // Dummy value
                 cachedConditions.URLight.brightness = value
             }
+            return 'OK'
         } else {
             return cachedConditions['URLight'].brightness.toString()
         }
@@ -162,7 +167,7 @@ const lightResponder = (type, value) => {
             const newTemperatureStep = Math.round(
                 (temperatureSteps * value - temperatureRange.min) / (temperatureRange.max - temperatureRange.min)
             )
-            if (cachedConditions.URLight.locked) {return}
+            if (cachedConditions.URLight.locked) { return }
             if (boardReady) {
                 cachedConditions.URLight.locked = true
                 const interval = setInterval(() => {
@@ -182,6 +187,7 @@ const lightResponder = (type, value) => {
                 // Dummy value
                 cachedConditions.URLight.temperature = value
             }
+            return 'OK'
         } else {
             return cachedConditions['URLight'].temperature.toString()
         }
@@ -190,4 +196,16 @@ const lightResponder = (type, value) => {
 
 const sensorResponder = () => {
     return JSON.stringify(cachedConditions['Sensor'])
+}
+
+const IRResponder = (value) => {
+    if (value !== undefined) {
+        pinDefinitions.IR.strobe(10, () => {
+            pinDefinitions.IR.stop()
+        })
+        cachedConditions.HallLightOn = !cachedConditions.HallLightOn
+        return "OK"
+    } else {
+        return cachedConditions.HallLightOn
+    }
 }
