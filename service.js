@@ -199,7 +199,7 @@ const sensorResponder = () => {
 }
 
 const IRResponder = (value) => {
-    if (value !== undefined) {
+    if (value.length > 0) {
         pinDefinitions.IR.strobe(10, () => {
             pinDefinitions.IR.stop()
         })
