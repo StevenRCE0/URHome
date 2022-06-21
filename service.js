@@ -206,6 +206,6 @@ const IRResponder = (value) => {
         cachedConditions.HallLightOn = !cachedConditions.HallLightOn
         return "OK"
     } else {
-        return cachedConditions.HallLightOn
+        return (cachedConditions.HallLightOn ? 1 : 0).toString()
     }
 }
