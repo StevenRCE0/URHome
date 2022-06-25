@@ -69,7 +69,7 @@ board.on('ready', () => {
         brightnessDecrease: new five.Pin(5),
         temperatureColder: new five.Pin(7),
         temperatureWarmer: new five.Pin(6),
-        IR: new five.Led(8)
+        IR: new five.Pin(8)
     }
     const integratedSensor = new five.Multi({
         controller: 'BME280',
@@ -198,13 +198,15 @@ const sensorResponder = () => {
     return JSON.stringify(cachedConditions['Sensor'])
 }
 
-const IRResponder = (value) => {
-    if (value.length > 0) {
-        pinDefinitions.IR.strobe(10, () => {
-            pinDefinitions.IR.stop()
-        })
+const IRResponder = (request) => {
+    console.log(request);
+    if (request.length > 0) {
+        if (request === (cachedConditions.HallLightOn ? 'on' : 'off')) {
+            return 'OK'
+        }
         cachedConditions.HallLightOn = !cachedConditions.HallLightOn
-        return "OK"
+        tapButton(pinDefinitions.IR)
+        return 'OK'
     } else {
         return (cachedConditions.HallLightOn ? 1 : 0).toString()
     }
