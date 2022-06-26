@@ -5,12 +5,12 @@ const brightnessSteps = 15
 const temperatureSteps = 15
 const temperatureRange = {
     min: 50,
-    max: 400
+    max: 400,
 }
 
 const relayTiming = {
     on: 75,
-    off: 50
+    off: 50,
 }
 
 let cachedConditions = {
@@ -18,13 +18,18 @@ let cachedConditions = {
         on: false,
         brightness: 0,
         temperature: temperatureRange.min,
+        temperaturePending: {
+            enabled: false,
+            cached: 0,
+            new: 0
+        },
         locked: false,
     },
     Sensor: {
         temperature: 29,
         humidity: 40,
     },
-    HallLightOn: false
+    HallLightOn: false,
 }
 
 var board = new five.Board({
@@ -38,7 +43,7 @@ var pinDefinitions = {
     brightnessDecrease: undefined,
     temperatureColder: undefined,
     temperatureWarmer: undefined,
-    IR: undefined
+    IR: undefined,
 }
 
 const tapButton = (pin) => {
@@ -47,6 +52,30 @@ const tapButton = (pin) => {
     setTimeout(() => {
         pin.low()
     }, relayTiming.off)
+}
+const tapGradualButton = (
+    positiveButton,
+    negativeButton,
+    newStep,
+    cachedStep,
+    callback
+) => {
+    cachedConditions.URLight.locked = true
+    const interval = setInterval(() => {
+        if (cachedStep < newStep) {
+            tapButton(positiveButton)
+            cachedStep++
+        } else if (cachedStep > newStep) {
+            tapButton(negativeButton)
+            cachedStep--
+        } else {
+            clearInterval(interval)
+            cachedConditions.URLight.locked = false
+            if (callback) {
+                callback()
+            }
+        }
+    }, relayTiming.off + relayTiming.on)
 }
 
 const resetLight = () => {
@@ -69,7 +98,7 @@ board.on('ready', () => {
         brightnessDecrease: new five.Pin(5),
         temperatureColder: new five.Pin(7),
         temperatureWarmer: new five.Pin(6),
-        IR: new five.Pin(8)
+        IR: new five.Pin(8),
     }
     const integratedSensor = new five.Multi({
         controller: 'BME280',
@@ -111,6 +140,14 @@ const lightResponder = (type, value) => {
                     tapButton(pinDefinitions.off)
                     cachedConditions.URLight.on = false
                 }
+                if (cachedConditions.URLight.temperaturePending.enabled) {
+                    tapGradualButton(
+                        pinDefinitions.temperatureColder,
+                        pinDefinitions.temperatureWarmer,
+                        cachedConditions.URLight.temperaturePending.new,
+                        cachedConditions.URLight.temperaturePending.cached
+                    )
+                }
                 cachedConditions.URLight.locked = false
             } else if (!boardReady) {
                 // Dummy value
@@ -118,8 +155,8 @@ const lightResponder = (type, value) => {
                     value === 'on'
                         ? true
                         : value === 'off'
-                            ? false
-                            : cachedConditions.URLight.on
+                        ? false
+                        : cachedConditions.URLight.on
             }
             return 'OK'
         } else {
@@ -134,22 +171,19 @@ const lightResponder = (type, value) => {
             const newBrightnessStep = Math.round(
                 (brightnessSteps * value) / 100
             )
-            if (cachedConditions.URLight.locked) { return }
+            if (cachedConditions.URLight.locked) {
+                return
+            }
             if (boardReady) {
-                cachedConditions.URLight.locked = true
-                const interval = setInterval(() => {
-                    if (cachedBrightnessStep < newBrightnessStep) {
-                        tapButton(pinDefinitions.brightnessIncrease)
-                        cachedBrightnessStep++
-                    } else if (cachedBrightnessStep > newBrightnessStep) {
-                        tapButton(pinDefinitions.brightnessDecrease)
-                        cachedBrightnessStep--
-                    } else {
-                        clearInterval(interval)
-                        cachedConditions.URLight.locked = false
+                tapGradualButton(
+                    pinDefinitions.brightnessIncrease,
+                    pinDefinitions.brightnessDecrease,
+                    newBrightnessStep,
+                    cachedBrightnessStep,
+                    () => {
+                        cachedConditions['URLight'].brightness = value
                     }
-                }, relayTiming.off + relayTiming.on)
-                cachedConditions['URLight'].brightness = value
+                )
             } else if (!boardReady) {
                 // Dummy value
                 cachedConditions.URLight.brightness = value
@@ -162,27 +196,36 @@ const lightResponder = (type, value) => {
     if (type === 'temperature') {
         if (value.length > 0) {
             var cachedTemperatureStep = Math.round(
-                (temperatureSteps * cachedConditions.URLight.temperature - temperatureRange.min) / (temperatureRange.max - temperatureRange.min)
+                (temperatureSteps * cachedConditions.URLight.temperature -
+                    temperatureRange.min) /
+                    (temperatureRange.max - temperatureRange.min)
             )
             const newTemperatureStep = Math.round(
-                (temperatureSteps * value - temperatureRange.min) / (temperatureRange.max - temperatureRange.min)
+                (temperatureSteps * value - temperatureRange.min) /
+                    (temperatureRange.max - temperatureRange.min)
             )
-            if (cachedConditions.URLight.locked) { return }
+            if (cachedConditions.URLight.locked) {
+                return
+            }
             if (boardReady) {
-                cachedConditions.URLight.locked = true
-                const interval = setInterval(() => {
-                    if (cachedTemperatureStep < newTemperatureStep) {
-                        tapButton(pinDefinitions.temperatureColder)
-                        cachedTemperatureStep++
-                    } else if (cachedTemperatureStep > newTemperatureStep) {
-                        tapButton(pinDefinitions.temperatureWarmer)
-                        cachedTemperatureStep--
-                    } else {
-                        clearInterval(interval)
-                        cachedConditions.URLight.locked = false
+                if (cachedConditions.URLight.on) {
+                    tapGradualButton(
+                        pinDefinitions.temperatureColder,
+                        pinDefinitions.temperatureWarmer,
+                        newTemperatureStep,
+                        cachedTemperatureStep,
+                        () => {
+                            cachedConditions['URLight'].temperature = value
+                        }
+                    )
+                } else {
+                    cachedConditions.URLight.temperaturePending = {
+                        enabled: true,
+                        cached: cachedBrightnessStep,
+                        new: newTemperatureStep
                     }
-                }, relayTiming.off + relayTiming.on)
-                cachedConditions['URLight'].temperature = value
+                    cachedConditions['URLight'].temperature = value
+                }
             } else if (!boardReady) {
                 // Dummy value
                 cachedConditions.URLight.temperature = value
@@ -199,7 +242,7 @@ const sensorResponder = () => {
 }
 
 const IRResponder = (request) => {
-    console.log(request);
+    console.log(request)
     if (request.length > 0) {
         if (request === (cachedConditions.HallLightOn ? 'on' : 'off')) {
             return 'OK'
