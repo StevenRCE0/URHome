@@ -134,16 +134,11 @@ const lightResponder = (type, value) => {
     if (type === 'on') {
         if (value.length > 0) {
             if (boardReady && !cachedConditions.URLight.locked) {
-                cachedConditions.URLight.locked = true
                 if (value === 'on') {
-                    tapButton(pinDefinitions.on, () => {
-                        cachedConditions.URLight.locked = false
-                    })
+                    tapButton(pinDefinitions.on)
                     cachedConditions.URLight.on = true
                 } else if (value === 'off') {
-                    tapButton(pinDefinitions.off, () => {
-                        cachedConditions.URLight.locked = false
-                    })
+                    tapButton(pinDefinitions.off)
                     cachedConditions.URLight.on = false
                 }
                 if (cachedConditions.URLight.temperaturePending.enabled) {
@@ -185,6 +180,7 @@ const lightResponder = (type, value) => {
                 return
             }
             if (boardReady) {
+                console.log('should tap');
                 tapGradualButton(
                     pinDefinitions.brightnessIncrease,
                     pinDefinitions.brightnessDecrease,
