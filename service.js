@@ -46,11 +46,13 @@ var pinDefinitions = {
     IR: undefined,
 }
 
-const tapButton = (pin) => {
-    console.log('Tapped', pin.pin)
+const tapButton = (pin, callback) => {
     pin.high()
     setTimeout(() => {
         pin.low()
+        if (callback) {
+            callback()
+        }
     }, relayTiming.off)
 }
 const tapGradualButton = (
@@ -134,24 +136,29 @@ const lightResponder = (type, value) => {
             if (boardReady && !cachedConditions.URLight.locked) {
                 cachedConditions.URLight.locked = true
                 if (value === 'on') {
-                    tapButton(pinDefinitions.on)
+                    tapButton(pinDefinitions.on, () => {
+                        cachedConditions.URLight.locked = false
+                    })
                     cachedConditions.URLight.on = true
                 } else if (value === 'off') {
-                    tapButton(pinDefinitions.off)
+                    tapButton(pinDefinitions.off, () => {
+                        cachedConditions.URLight.locked = false
+                    })
                     cachedConditions.URLight.on = false
                 }
                 if (cachedConditions.URLight.temperaturePending.enabled) {
-                    tapGradualButton(
-                        pinDefinitions.temperatureColder,
-                        pinDefinitions.temperatureWarmer,
-                        cachedConditions.URLight.temperaturePending.new,
-                        cachedConditions.URLight.temperaturePending.cached,
-                        () => {
-                            cachedConditions.URLight.temperaturePending.enabled = false
-                        }
-                    )
+                    setTimeout(() => {
+                        tapGradualButton(
+                            pinDefinitions.temperatureColder,
+                            pinDefinitions.temperatureWarmer,
+                            cachedConditions.URLight.temperaturePending.new,
+                            cachedConditions.URLight.temperaturePending.cached,
+                            () => {
+                                cachedConditions.URLight.temperaturePending.enabled = false
+                            }
+                        )
+                    }, relayTiming.on + relayTiming.off);
                 }
-                cachedConditions.URLight.locked = false
             } else if (!boardReady) {
                 // Dummy value
                 cachedConditions.URLight.on =
@@ -224,7 +231,7 @@ const lightResponder = (type, value) => {
                 } else {
                     cachedConditions.URLight.temperaturePending = {
                         enabled: true,
-                        cached: cachedBrightnessStep,
+                        cached: cachedTemperatureStep,
                         new: newTemperatureStep
                     }
                     cachedConditions['URLight'].temperature = value
