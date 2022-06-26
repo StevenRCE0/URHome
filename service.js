@@ -145,7 +145,10 @@ const lightResponder = (type, value) => {
                         pinDefinitions.temperatureColder,
                         pinDefinitions.temperatureWarmer,
                         cachedConditions.URLight.temperaturePending.new,
-                        cachedConditions.URLight.temperaturePending.cached
+                        cachedConditions.URLight.temperaturePending.cached,
+                        () => {
+                            cachedConditions.URLight.temperaturePending.enabled = false
+                        }
                     )
                 }
                 cachedConditions.URLight.locked = false
