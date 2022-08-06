@@ -45,6 +45,10 @@ var pinDefinitions = {
     temperatureWarmer: undefined,
     IR: undefined,
 }
+var buttonDefinitions = {
+    clickButton: undefined
+}
+var debugLed
 
 const tapButton = (pin, callback) => {
     pin.high()
@@ -102,10 +106,27 @@ board.on('ready', () => {
         temperatureWarmer: new five.Pin(6),
         IR: new five.Pin(8),
     }
+    buttonDefinitions = {
+        clickButton: 9
+    }
+
     const integratedSensor = new five.Multi({
         controller: 'BME280',
     })
-    integratedSensor.on('data', function () {
+    const clickButton = new five.Button({
+        pin: buttonDefinitions.clickButton,
+        isPullup: true,
+        holdtime: 2000
+    })
+    debugLed = new five.Led(13)
+
+    clickButton.on('press', function() {
+        IRResponder(cachedConditions.HallLightOn ? 'off' : 'on')
+    })
+    clickButton.on('hold', function() {
+        cachedConditions.HallLightOn = !cachedConditions.HallLightOn
+    })
+    integratedSensor.on('data', function() {
         cachedConditions.Sensor.temperature = this.thermometer.celsius
         cachedConditions.Sensor.humidity = this.hygrometer.relativeHumidity
     })
@@ -180,7 +201,6 @@ const lightResponder = (type, value) => {
                 return
             }
             if (boardReady) {
-                console.log('should tap');
                 tapGradualButton(
                     pinDefinitions.brightnessIncrease,
                     pinDefinitions.brightnessDecrease,
@@ -248,7 +268,6 @@ const sensorResponder = () => {
 }
 
 const IRResponder = (request) => {
-    console.log(request)
     if (request.length > 0) {
         if (request === (cachedConditions.HallLightOn ? 'on' : 'off')) {
             return 'OK'
