@@ -1,6 +1,10 @@
 import http from 'http'
 import five from 'johnny-five'
 
+const serverConfiguration = {
+    port: 8700,
+}
+
 const brightnessSteps = 15
 const temperatureSteps = 15
 const temperatureRange = {
@@ -23,7 +27,6 @@ let cachedConditions = {
             cached: 0,
             new: 0
         },
-        locked: false,
     },
     Sensor: {
         temperature: 29,
@@ -32,11 +35,11 @@ let cachedConditions = {
     HallLightOn: false,
 }
 
-var board = new five.Board({
+let board = new five.Board({
     repl: false,
 })
-var boardReady = false
-var pinDefinitions = {
+let boardReady = false
+let pinDefinitions = {
     on: undefined,
     off: undefined,
     brightnessIncrease: undefined,
@@ -45,19 +48,55 @@ var pinDefinitions = {
     temperatureWarmer: undefined,
     IR: undefined,
 }
-var buttonDefinitions = {
+const pinGroups = {
+    on: 0,
+    off: 0,
+    brightnessIncrease: 1,
+    brightnessDecrease: 1,
+    temperatureColder: 1,
+    temperatureWarmer: 1,
+    IR: 2,
+}
+let buttonDefinitions = {
     clickButton: undefined
 }
-var debugLed
+let debugLed
+
+let tapQueues = {}
+Array.from(new Set(Object.values(pinGroups))).forEach(key => {
+    tapQueues[key] = []
+})
+function findGroup(pin) {
+    const key = Object.keys(pinDefinitions).find((key) => pinDefinitions[key] === pin)
+    if (!key) {
+        console.error('programmatic error: no queue found for ' + pin.pin)
+        return
+    }
+    return pinGroups[key]
+}
 
 const tapButton = (pin, callback) => {
-    pin.high()
-    setTimeout(() => {
-        pin.low()
-        if (callback) {
-            callback()
+    const queueKey = findGroup(pin)
+    tapQueues[queueKey].push(pin)
+
+    if (tapQueues[queueKey].length > 1) {
+        return
+    }
+
+    const tick = setInterval(() => {
+        if (tapQueues[queueKey].length < 1) {
+            if (!!callback) {
+                callback()
+            }
+            clearInterval(tick)
+            return
         }
-    }, relayTiming.off)
+        const targetPin = tapQueues[queueKey].pop()
+        targetPin.high()
+        setTimeout(() => {
+            targetPin.low()
+        }, relayTiming.off)
+    }, relayTiming.on + relayTiming.off);
 }
 const tapGradualButton = (
     positiveButton,
@@ -66,7 +105,6 @@ const tapGradualButton = (
     cachedStep,
     callback
 ) => {
-    cachedConditions.URLight.locked = true
     const interval = setInterval(() => {
         if (cachedStep < newStep) {
             tapButton(positiveButton)
@@ -76,7 +114,6 @@ const tapGradualButton = (
             cachedStep--
         } else {
             clearInterval(interval)
-            cachedConditions.URLight.locked = false
             if (callback) {
                 callback()
             }
@@ -90,7 +127,11 @@ const resetLight = () => {
         for (let i = 0; i < brightnessSteps; i++) {
             tapButton(pinDefinitions.brightnessIncrease)
         }
+        for (let i = 0; i < temperatureSteps; i++) {
+            tapButton(pinDefinitions.temperatureColder)
+        }
     }
+    cachedConditions.URLight.temperature = temperatureRange.min
     cachedConditions.URLight.brightness = 100
     cachedConditions.URLight.on = true
 }
@@ -102,14 +143,13 @@ board.on('ready', () => {
         off: new five.Pin(3),
         brightnessIncrease: new five.Pin(4),
         brightnessDecrease: new five.Pin(5),
-        temperatureColder: new five.Pin(7),
-        temperatureWarmer: new five.Pin(6),
+        temperatureColder: new five.Pin(6),
+        temperatureWarmer: new five.Pin(7),
         IR: new five.Pin(8),
     }
     buttonDefinitions = {
         clickButton: 9
     }
-
     const integratedSensor = new five.Multi({
         controller: 'BME280',
     })
@@ -139,22 +179,34 @@ board.on('ready', () => {
 http.createServer((req, res) => {
     const requestURL = new URL(req.url, `http://${req.headers.host}`)
     const requestPath = requestURL.pathname.split('/')
-    if (requestPath[1] === 'light') {
-        res.writeHead(200, { 'Content-Type': 'text/plain' })
-        res.end(lightResponder(requestPath[2], requestURL.search.substring(1)))
-    } else if (requestPath[1] === 'sensor') {
-        res.writeHead(200, { 'Content-Type': 'text/plain' })
-        res.end(sensorResponder())
-    } else if (requestPath[1] === 'hallLight') {
-        res.writeHead(200, { 'Content-Type': 'text/plain' })
-        res.end(IRResponder(requestURL.search.substring(1)))
+    switch (requestPath[1]) {
+        case 'light':
+            res.writeHead(200, { 'Content-Type': 'text/plain' })
+            res.end(lightResponder(requestPath[2], requestURL.search.substring(1)))
+            break;
+        case 'sensor':
+            res.writeHead(200, { 'Content-Type': 'text/plain' })
+            res.end(sensorResponder())
+            break;
+        case 'hallLight':
+            res.writeHead(200, { 'Content-Type': 'text/plain' })
+            res.end(IRResponder(requestURL.search.substring(1)))
+            break;
+        default:
+            res.writeHead(200, { 'Content-Type': 'text/plain' })
+            res.end('Insufficient Interface')
+            break;
     }
-}).listen(8700)
+}).listen(serverConfiguration.port)
 
 const lightResponder = (type, value) => {
+    if (type === 'reset') {
+        resetLight()
+        return 'OK'
+    }
     if (type === 'on') {
         if (value.length > 0) {
-            if (boardReady && !cachedConditions.URLight.locked) {
+            if (boardReady) {
                 if (value === 'on') {
                     tapButton(pinDefinitions.on)
                     cachedConditions.URLight.on = true
@@ -165,8 +217,8 @@ const lightResponder = (type, value) => {
                 if (cachedConditions.URLight.temperaturePending.enabled) {
                     setTimeout(() => {
                         tapGradualButton(
-                            pinDefinitions.temperatureColder,
                             pinDefinitions.temperatureWarmer,
+                            pinDefinitions.temperatureColder,
                             cachedConditions.URLight.temperaturePending.new,
                             cachedConditions.URLight.temperaturePending.cached,
                             () => {
@@ -191,15 +243,12 @@ const lightResponder = (type, value) => {
     }
     if (type === 'brightness') {
         if (value.length > 0) {
-            var cachedBrightnessStep = Math.round(
+            let cachedBrightnessStep = Math.round(
                 (brightnessSteps * cachedConditions.URLight.brightness) / 100
             )
             const newBrightnessStep = Math.round(
                 (brightnessSteps * value) / 100
             )
-            if (cachedConditions.URLight.locked) {
-                return
-            }
             if (boardReady) {
                 tapGradualButton(
                     pinDefinitions.brightnessIncrease,
@@ -221,7 +270,7 @@ const lightResponder = (type, value) => {
     }
     if (type === 'temperature') {
         if (value.length > 0) {
-            var cachedTemperatureStep = Math.round(
+            let cachedTemperatureStep = Math.round(
                 (temperatureSteps * cachedConditions.URLight.temperature -
                     temperatureRange.min) /
                     (temperatureRange.max - temperatureRange.min)
@@ -230,9 +279,6 @@ const lightResponder = (type, value) => {
                 (temperatureSteps * value - temperatureRange.min) /
                     (temperatureRange.max - temperatureRange.min)
             )
-            if (cachedConditions.URLight.locked) {
-                return
-            }
             if (boardReady) {
                 if (cachedConditions.URLight.on) {
                     tapGradualButton(
@@ -269,6 +315,10 @@ const sensorResponder = () => {
 
 const IRResponder = (request) => {
     if (request.length > 0) {
+        if (request === 'switch') {
+            cachedConditions.HallLightOn = !cachedConditions.HallLightOn
+            return 'OK'
+        }
         if (request === (cachedConditions.HallLightOn ? 'on' : 'off')) {
             return 'OK'
         }
