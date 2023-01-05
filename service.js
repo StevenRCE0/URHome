@@ -282,8 +282,8 @@ const lightResponder = (type, value) => {
             if (boardReady) {
                 if (cachedConditions.URLight.on) {
                     tapGradualButton(
-                        pinDefinitions.temperatureColder,
                         pinDefinitions.temperatureWarmer,
+                        pinDefinitions.temperatureColder,
                         newTemperatureStep,
                         cachedTemperatureStep,
                         () => {
