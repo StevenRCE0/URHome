@@ -13,11 +13,10 @@ const temperatureRange = {
     min: 50,
     max: 400,
 }
-
 export const relayTiming = {
     on: 75,
     off: 50,
-    wait: 250
+    wait: 250,
 }
 
 let placeholderConditions = {
@@ -25,6 +24,7 @@ let placeholderConditions = {
         on: false,
         brightness: 0,
         temperature: temperatureRange.min,
+        hold: undefined,
     },
     Sensor: {
         temperature: 29,
@@ -34,7 +34,6 @@ let placeholderConditions = {
 }
 let cachedConditions
 const saveRead = readConfiguration()
-const saveEnabled = !!saveRead
 let saving = false
 let saveTimeout = 10000
 if (saveRead) {
@@ -72,10 +71,10 @@ let debugLed
 export const pinGroups = {
     on: 0,
     off: 0,
-    brightnessIncrease: 1,
-    brightnessDecrease: 1,
-    temperatureColder: 1,
-    temperatureWarmer: 1,
+    brightnessIncrease: 0,
+    brightnessDecrease: 0,
+    temperatureColder: 0,
+    temperatureWarmer: 0,
     IR: 2,
 }
 
@@ -179,6 +178,54 @@ http.createServer((req, res) => {
     }
 }).listen(serverConfiguration.port)
 
+class LightStrokers {
+    brightness(value, cbe = true) {
+        const cachedBrightnessStep =
+            brightnessSteps *
+            Math.round(cachedConditions.URLight.brightness / 100)
+
+        const newBrightnessStep = brightnessSteps * Math.round(value / 100)
+
+        tapGradualButton(
+            pinDefinitions.brightnessIncrease,
+            pinDefinitions.brightnessDecrease,
+            newBrightnessStep,
+            cachedBrightnessStep,
+            cbe
+                ? () => {
+                      cachedConditions['URLight'].brightness = value
+                  }
+                : () => {},
+            !cachedConditions['URLight'].on
+        )
+    }
+
+    temperature(value, cbe = true) {
+        let cachedTemperatureStep = Math.round(
+            (temperatureSteps * cachedConditions.URLight.temperature -
+                temperatureRange.min) /
+                (temperatureRange.max - temperatureRange.min)
+        )
+        const newTemperatureStep = Math.round(
+            (temperatureSteps * value - temperatureRange.min) /
+                (temperatureRange.max - temperatureRange.min)
+        )
+        tapGradualButton(
+            pinDefinitions.temperatureWarmer,
+            pinDefinitions.temperatureColder,
+            newTemperatureStep,
+            cachedTemperatureStep,
+            cbe
+                ? () => {
+                      cachedConditions['URLight'].temperature = value
+                  }
+                : () => {},
+            !cachedConditions['URLight'].on
+        )
+    }
+}
+const lightStrokers = new LightStrokers()
+
 const lightResponder = (type, value) => {
     if (type === 'reset') {
         resetLight()
@@ -190,8 +237,33 @@ const lightResponder = (type, value) => {
                 tapButton(pinDefinitions.on)
                 cachedConditions.URLight.on = true
                 setTimeout(() => {
+                    if (cachedConditions['URLight'].hold !== undefined) {
+                        if (
+                            cachedConditions['URLight'].hold.brightness !==
+                            undefined
+                        ) {
+                            lightStrokers.brightness(
+                                cachedConditions['URLight'].hold.brightness,
+                                false
+                            )
+                            cachedConditions['URLight'].brightness =
+                                cachedConditions['URLight'].hold.brightness
+                        }
+                        if (
+                            cachedConditions['URLight'].hold.temperature !==
+                            undefined
+                        ) {
+                            lightStrokers.temperature(
+                                cachedConditions['URLight'].hold.temperature,
+                                false
+                            )
+                            cachedConditions['URLight'].temperature =
+                                cachedConditions['URLight'].hold.temperature
+                        }
+                        cachedConditions['URLight'].hold = undefined
+                    }
                     solveQueue(tapQueues[pinGroups.brightnessIncrease])
-                }, relayTiming.wait);
+                }, relayTiming.wait)
             } else if (value === 'off') {
                 tapButton(pinDefinitions.off)
                 cachedConditions.URLight.on = false
@@ -203,22 +275,22 @@ const lightResponder = (type, value) => {
     }
     if (type === 'brightness') {
         if (value.length > 0) {
-            const cachedBrightnessStep =
-                brightnessSteps *
-                Math.round(cachedConditions.URLight.brightness / 100)
+            if (!cachedConditions['URLight'].on) {
+                cachedConditions['URLight']['hold'] = cachedConditions[
+                    'URLight'
+                ]['hold']
+                    ? {
+                          ...cachedConditions['URLight']['hold'],
+                          brightness: value,
+                      }
+                    : {
+                          brightness: value,
+                      }
+                return 'OK'
+            }
 
-            const newBrightnessStep = brightnessSteps * Math.round(value / 100)
+            lightStrokers.brightness(value)
 
-            tapGradualButton(
-                pinDefinitions.brightnessIncrease,
-                pinDefinitions.brightnessDecrease,
-                newBrightnessStep,
-                cachedBrightnessStep,
-                () => {
-                    cachedConditions['URLight'].brightness = value
-                },
-                !cachedConditions['URLight'].on
-            )
             return 'OK'
         } else {
             return cachedConditions['URLight'].brightness.toString()
@@ -226,25 +298,22 @@ const lightResponder = (type, value) => {
     }
     if (type === 'temperature') {
         if (value.length > 0) {
-            let cachedTemperatureStep = Math.round(
-                (temperatureSteps * cachedConditions.URLight.temperature -
-                    temperatureRange.min) /
-                    (temperatureRange.max - temperatureRange.min)
-            )
-            const newTemperatureStep = Math.round(
-                (temperatureSteps * value - temperatureRange.min) /
-                    (temperatureRange.max - temperatureRange.min)
-            )
-            tapGradualButton(
-                pinDefinitions.temperatureWarmer,
-                pinDefinitions.temperatureColder,
-                newTemperatureStep,
-                cachedTemperatureStep,
-                () => {
-                    cachedConditions['URLight'].temperature = value
-                },
-                !cachedConditions['URLight'].on
-            )
+            if (!cachedConditions['URLight'].on) {
+                cachedConditions['URLight']['hold'] = cachedConditions[
+                    'URLight'
+                ]['hold']
+                    ? {
+                          ...cachedConditions['URLight']['hold'],
+                          temperature: value,
+                      }
+                    : {
+                          temperature: value,
+                      }
+                return 'OK'
+            }
+
+            lightStrokers.temperature(value)
+
             return 'OK'
         } else {
             return cachedConditions['URLight'].temperature.toString()
