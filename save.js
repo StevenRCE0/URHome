@@ -15,7 +15,6 @@ export function saveConfiguration(object) {
                 if (err) {
                     reject(err)
                 } else {
-                    console.log('Saved!')
                     resolve()
                 }
             }
