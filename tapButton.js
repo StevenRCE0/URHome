@@ -27,6 +27,7 @@ export const tapGradualButton = (
                 newStep - cachedStep === 1 ? callback : null,
                 delayed
             )
+            console.log('+');
             cachedStep++
         } else if (cachedStep > newStep) {
             tapButton(
@@ -34,6 +35,7 @@ export const tapGradualButton = (
                 cachedStep - newStep === 1 ? callback : null,
                 delayed
             )
+            console.log('-');
             cachedStep--
         }
     }
