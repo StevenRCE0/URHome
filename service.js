@@ -17,6 +17,7 @@ const temperatureRange = {
 export const relayTiming = {
     on: 75,
     off: 50,
+    wait: 250
 }
 
 let placeholderConditions = {
@@ -98,7 +99,7 @@ const resetLight = () => {
     }
     setTimeout(() => {
         gradual()
-    }, 500)
+    }, relayTiming.wait)
 }
 
 board.on('ready', () => {
@@ -188,7 +189,9 @@ const lightResponder = (type, value) => {
             if (value === 'on') {
                 tapButton(pinDefinitions.on)
                 cachedConditions.URLight.on = true
-                solveQueue(tapQueues[pinGroups.brightnessIncrease])
+                setTimeout(() => {
+                    solveQueue(tapQueues[pinGroups.brightnessIncrease])
+                }, relayTiming.wait);
             } else if (value === 'off') {
                 tapButton(pinDefinitions.off)
                 cachedConditions.URLight.on = false
@@ -203,7 +206,7 @@ const lightResponder = (type, value) => {
             const cachedBrightnessStep =
                 brightnessSteps *
                 Math.round(cachedConditions.URLight.brightness / 100)
-                
+
             const newBrightnessStep = brightnessSteps * Math.round(value / 100)
 
             tapGradualButton(
